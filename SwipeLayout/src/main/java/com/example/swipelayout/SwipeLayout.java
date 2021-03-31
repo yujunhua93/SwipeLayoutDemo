@@ -1,18 +1,26 @@
 package com.example.swipelayout;
 
+import android.app.Activity;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
+import android.widget.Scroller;
 
 public class SwipeLayout extends LinearLayout {
     private int mLastX;
     private int mLastY;
     private int mDownX;
     private int mDownY;
+    private Context mContext;
+
+    private Scroller mScroller;
+
+    private View mContentView;
 
     private float percent = 0.4f; //阈值,控制是否回弹还是展开
 
@@ -26,7 +34,9 @@ public class SwipeLayout extends LinearLayout {
 
     public SwipeLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-
+        mContext = context;
+        mScroller = new Scroller(mContext,new DecelerateInterpolator());
+        setClickable(true);
         setOrientation(HORIZONTAL);
     }
 
@@ -39,18 +49,21 @@ public class SwipeLayout extends LinearLayout {
         int heightMode = MeasureSpec.getMode(heightMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
-
         int width = 0;
 
         int childCount = getChildCount();
         for (int i = 0; i < childCount; i++) {
             View view = getChildAt(i);
             measureChild(view,widthMeasureSpec,heightMeasureSpec);
-
-            int childWidth = view.getMeasuredWidth();
+            int childWidth ;
+            childWidth = view.getMeasuredWidth();
             int childheight = view.getMeasuredHeight();
 
+            if (i > 0){
 
+            }else {
+                mContentView = view;
+            }
             width = width + childWidth;
             Log.e("onMeasure_width",":"+width);
 
@@ -69,12 +82,13 @@ public class SwipeLayout extends LinearLayout {
             View view = getChildAt(i);
 
             if (i == 0){
-                int childWidth = view.getMeasuredWidth();
+                int childWidth =  view.getMeasuredWidth();
                 int childheight = view.getMeasuredHeight();
                 firstwidth = childWidth;
 
                 view.layout(0,0,childWidth,childheight);
             }else {
+
                 int childWidth = view.getMeasuredWidth();
                 int childheight = view.getMeasuredHeight();
 
@@ -83,39 +97,19 @@ public class SwipeLayout extends LinearLayout {
                 Log.e("childWidth",":"+childWidth);
                 Log.e("width",":"+firstwidth);
             }
-
-
         }
-
     }
 
-
-    @Override
-    public boolean onInterceptTouchEvent(MotionEvent ev) {
-        boolean isIntercepted = super.onInterceptTouchEvent(ev);
-
-        int action = ev.getAction();
-        switch (action) {
-            case MotionEvent.ACTION_DOWN: {
-                mDownX = mLastX = (int)ev.getX();
-                mDownY = (int)ev.getY();
-                return false;
-            }
-            case MotionEvent.ACTION_MOVE: {
-                int disX = (int)(ev.getX() - mDownX);
-                int disY = (int)(ev.getY() - mDownY);
-                return false;
-            }
-            case MotionEvent.ACTION_UP: {
-                    return false;
-            }
-            case MotionEvent.ACTION_CANCEL: {
-                return false;
-            }
-        }
-        return isIntercepted;
-    }
-
+//    @Override
+//    public boolean dispatchTouchEvent(MotionEvent ev) {
+//        switch (ev.getAction()) {
+//            case MotionEvent.ACTION_DOWN: {
+//                return true;
+////                Log.e("ACTION_DOWN","ACTION_DOWN");
+//            }
+//        }
+//        return super.dispatchTouchEvent(ev);
+//    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -125,14 +119,20 @@ public class SwipeLayout extends LinearLayout {
             case MotionEvent.ACTION_DOWN: {
                 mLastX = (int)event.getX();
                 mLastY = (int)event.getY();
-                Log.e("ACTION_DOWN","ACTION_DOWN");
+                Log.e("ACTION_DOWN",":"+mLastX);
                 break;
             }
             case MotionEvent.ACTION_MOVE: {
                 int disX = (int)(mLastX - event.getX());
                 int disY = (int)(mLastY - event.getY());
-                scrollBy(disX, 0);
-                Log.e("move","move");
+                if (Math.abs(disX) > 5){
+                    if (disX > 0 && disX < getMeasuredWidth() - mContentView.getMeasuredWidth()){
+                        scrollTo(disX, 0);
+                    }else {
+
+                    }
+                }
+                Log.e("move",":"+ disX);
                 break;
             }
             case MotionEvent.ACTION_UP: {
@@ -142,5 +142,28 @@ public class SwipeLayout extends LinearLayout {
             }
         }
         return super.onTouchEvent(event);
+    }
+
+
+    private void isExpand(){
+
+    }
+
+
+    public void closeMenu() {
+        mScroller.startScroll(getMeasuredWidth() - getScrollX(),0,getScrollX(),0);
+        invalidate();
+    }
+
+    @Override
+    public void computeScroll() {
+        super.computeScroll();
+        if (!mScroller.computeScrollOffset()) {
+            //计算currX，currY,并检测是否已完成“滚动”
+            return;
+        }
+        int tempX = mScroller.getCurrX();
+        scrollTo(tempX, 0); //会重复调用invalidate
+
     }
 }
