@@ -1,15 +1,12 @@
 package com.example.swipelayout;
 
-import android.app.Activity;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
-import android.widget.Scroller;
 
 public class SwipeLayout extends LinearLayout {
     private int mLastX;
@@ -18,8 +15,10 @@ public class SwipeLayout extends LinearLayout {
     private int mDownY;
     private Context mContext;
 
-    private Scroller mScroller;
+    float downX = 0;
+    float downY = 0;
 
+    private VelocityTracker mVelocityTracker;
     private View mContentView;
 
     private float percent = 0.4f; //阈值,控制是否回弹还是展开
@@ -35,11 +34,14 @@ public class SwipeLayout extends LinearLayout {
     public SwipeLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         mContext = context;
-        mScroller = new Scroller(mContext,new DecelerateInterpolator());
+        init();
         setClickable(true);
         setOrientation(HORIZONTAL);
     }
 
+    private void init() {
+        mVelocityTracker = VelocityTracker.obtain();
+    }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -68,32 +70,24 @@ public class SwipeLayout extends LinearLayout {
             Log.e("onMeasure_width",":"+width);
 
         }
-
         setMeasuredDimension(width,heightSize);
-
     }
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
-
         int firstwidth = 0;
         int childCount = getChildCount();
         for (int i = 0; i < childCount; i++) {
             View view = getChildAt(i);
-
             if (i == 0){
                 int childWidth =  view.getMeasuredWidth();
                 int childheight = view.getMeasuredHeight();
                 firstwidth = childWidth;
-
                 view.layout(0,0,childWidth,childheight);
             }else {
-
                 int childWidth = view.getMeasuredWidth();
                 int childheight = view.getMeasuredHeight();
-
                 view.layout(firstwidth + childWidth*(i-1),0,firstwidth + childWidth*i ,childheight);
-
                 Log.e("childWidth",":"+childWidth);
                 Log.e("width",":"+firstwidth);
             }
@@ -112,58 +106,83 @@ public class SwipeLayout extends LinearLayout {
 //    }
 
     @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        int dx;
-        int dy;
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN: {
-                mLastX = (int)event.getX();
-                mLastY = (int)event.getY();
-                Log.e("ACTION_DOWN",":"+mLastX);
-                break;
-            }
-            case MotionEvent.ACTION_MOVE: {
-                int disX = (int)(mLastX - event.getX());
-                int disY = (int)(mLastY - event.getY());
-                if (Math.abs(disX) > 5){
-                    if (disX > 0 && disX < getMeasuredWidth() - mContentView.getMeasuredWidth()){
-                        scrollTo(disX, 0);
-                    }else {
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        return super.onInterceptTouchEvent(ev);
+    }
 
-                    }
-                }
-                Log.e("move",":"+ disX);
-                break;
-            }
-            case MotionEvent.ACTION_UP: {
-                dx = (int)(mDownX - event.getX());
-                dy = (int)(mDownY - event.getY());
-                break;
-            }
-        }
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        mVelocityTracker.addMovement(event);
+        switch (event.getAction()){
+             case MotionEvent.ACTION_DOWN:
+                 downX =  event.getRawX();
+                 downY =  event.getRawY();
+                 Log.e("ACTION_DOWN:","x:"+downX+"y:"+downY);
+                 break;
+             case MotionEvent.ACTION_MOVE:
+                 float moveX =  event.getRawX();
+                 float moveY =  event.getRawY();
+                 Log.e("ACTION_MOVE:","x:"+moveX+"y:"+moveY);
+                 if (Math.abs(moveX - downX) > 10){
+                     scrollTo((int) Math.abs(moveX - downX),0);
+                 }else {
+
+                 }
+                 break;
+             case MotionEvent.ACTION_UP:
+//                 int upX = (int) event.getRawX();
+//                 int upY = (int) event.getRawY();
+//                 scrollBy( upX - downX ,0);
+             case MotionEvent.ACTION_CANCEL:
+                 break;
+         }
+
+
+
+//        int dx;
+//        int dy;
+//        switch (event.getAction()) {
+//            case MotionEvent.ACTION_DOWN: {
+//                mLastX = (int)event.getX();
+//                mLastY = (int)event.getY();
+//                Log.e("ACTION_DOWN",":"+mLastX);
+//                break;
+//            }
+//            case MotionEvent.ACTION_MOVE: {
+//                int disX = (int)(mLastX - event.getX());
+//                int disY = (int)(mLastY - event.getY());
+//                if (Math.abs(disX) > 5){
+//                    if (disX > 0 && disX < getMeasuredWidth() - mContentView.getMeasuredWidth()){
+//                        scrollBy(disX, 0);
+//                    }else {
+//
+//                    }
+//                }
+//                Log.e("move",":"+ disX);
+//                break;
+//            }
+//            case MotionEvent.ACTION_UP: {
+//                dx = (int)(mDownX - event.getX());
+//                dy = (int)(mDownY - event.getY());
+//                break;
+//            }
+//        }
         return super.onTouchEvent(event);
     }
 
+
+    private void closeMenu(){
+
+    }
 
     private void isExpand(){
 
     }
 
 
-    public void closeMenu() {
-        mScroller.startScroll(getMeasuredWidth() - getScrollX(),0,getScrollX(),0);
-        invalidate();
-    }
-
     @Override
-    public void computeScroll() {
-        super.computeScroll();
-        if (!mScroller.computeScrollOffset()) {
-            //计算currX，currY,并检测是否已完成“滚动”
-            return;
-        }
-        int tempX = mScroller.getCurrX();
-        scrollTo(tempX, 0); //会重复调用invalidate
-
+    protected void onDetachedFromWindow() {
+        mVelocityTracker.recycle();
+        super.onDetachedFromWindow();
     }
 }
