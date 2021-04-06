@@ -7,6 +7,8 @@ import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.Scroller;
+import android.widget.Toast;
 
 public class SwipeLayout extends LinearLayout {
     private int mLastX;
@@ -20,6 +22,7 @@ public class SwipeLayout extends LinearLayout {
 
     private VelocityTracker mVelocityTracker;
     private View mContentView;
+    private Scroller mScroller;
 
     private float percent = 0.4f; //阈值,控制是否回弹还是展开
 
@@ -40,6 +43,7 @@ public class SwipeLayout extends LinearLayout {
     }
 
     private void init() {
+        mScroller = new Scroller(mContext);
         mVelocityTracker = VelocityTracker.obtain();
     }
 
@@ -122,14 +126,28 @@ public class SwipeLayout extends LinearLayout {
              case MotionEvent.ACTION_MOVE:
                  float moveX =  event.getRawX();
                  float moveY =  event.getRawY();
+
+                 if (Math.abs(moveX - downX) >= (getMeasuredWidth() - mContentView.getMeasuredWidth())) {
+                     Toast.makeText(mContext, "超过了最大宽度", Toast.LENGTH_SHORT).show();
+                     break;
+                 }//超过了控件最大宽度
                  Log.e("ACTION_MOVE:","x:"+moveX+"y:"+moveY);
-                 if (Math.abs(moveX - downX) > 10){
-                     scrollTo((int) Math.abs(moveX - downX),0);
+                 float moveX1 =  event.getRawX();
+                 float moveY1 =  event.getRawY();
+                 if (Math.abs(moveX1 - downX) > 10){
+                     scrollTo((int) Math.abs(moveX1 - downX),0);
                  }else {
 
                  }
                  break;
              case MotionEvent.ACTION_UP:
+                 float upX = event.getRawX();
+                 if (Math.abs(upX - downX) > 100 ){
+                     Toast.makeText(mContext, "大于100了执行动画", Toast.LENGTH_SHORT).show();
+                     mScroller.startScroll(0, 0, -(int)Math.abs(upX - downX), 0,1000);
+                     invalidate();
+//                     scrollBy(-(int) Math.abs(upX - downX),0);
+                 }
 //                 int upX = (int) event.getRawX();
 //                 int upY = (int) event.getRawY();
 //                 scrollBy( upX - downX ,0);
@@ -137,38 +155,9 @@ public class SwipeLayout extends LinearLayout {
                  break;
          }
 
-
-
-//        int dx;
-//        int dy;
-//        switch (event.getAction()) {
-//            case MotionEvent.ACTION_DOWN: {
-//                mLastX = (int)event.getX();
-//                mLastY = (int)event.getY();
-//                Log.e("ACTION_DOWN",":"+mLastX);
-//                break;
-//            }
-//            case MotionEvent.ACTION_MOVE: {
-//                int disX = (int)(mLastX - event.getX());
-//                int disY = (int)(mLastY - event.getY());
-//                if (Math.abs(disX) > 5){
-//                    if (disX > 0 && disX < getMeasuredWidth() - mContentView.getMeasuredWidth()){
-//                        scrollBy(disX, 0);
-//                    }else {
-//
-//                    }
-//                }
-//                Log.e("move",":"+ disX);
-//                break;
-//            }
-//            case MotionEvent.ACTION_UP: {
-//                dx = (int)(mDownX - event.getX());
-//                dy = (int)(mDownY - event.getY());
-//                break;
-//            }
-//        }
         return super.onTouchEvent(event);
     }
+
 
 
     private void closeMenu(){
@@ -177,6 +166,15 @@ public class SwipeLayout extends LinearLayout {
 
     private void isExpand(){
 
+    }
+
+    @Override
+    public void computeScroll() {
+        if (mScroller.computeScrollOffset()) {
+            scrollTo(mScroller.getCurrX(),mScroller.getCurrY());
+            postInvalidate();
+        }
+        super.computeScroll();
     }
 
 
