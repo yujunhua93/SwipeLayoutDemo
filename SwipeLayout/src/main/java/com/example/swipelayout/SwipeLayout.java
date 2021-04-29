@@ -22,7 +22,13 @@ public class SwipeLayout extends LinearLayout {
 
     private VelocityTracker mVelocityTracker;
     private View mContentView;
+    private float mMenuViewWidth;
     private Scroller mScroller;
+
+    int meunWidth = 0; // 菜单的宽度
+
+    private int[] location = new int[2] ;
+    private int locationX = location[0];
 
     private float percent = 0.4f; //阈值,控制是否回弹还是展开
 
@@ -40,6 +46,7 @@ public class SwipeLayout extends LinearLayout {
         init();
         setClickable(true);
         setOrientation(HORIZONTAL);
+//        getLocationOnScreen(location);
     }
 
     private void init() {
@@ -56,7 +63,7 @@ public class SwipeLayout extends LinearLayout {
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
         int width = 0;
-
+        meunWidth = 0;
         int childCount = getChildCount();
         for (int i = 0; i < childCount; i++) {
             View view = getChildAt(i);
@@ -66,13 +73,13 @@ public class SwipeLayout extends LinearLayout {
             int childheight = view.getMeasuredHeight();
 
             if (i > 0){
-
+                meunWidth = meunWidth + view.getMeasuredWidth();
             }else {
+
                 mContentView = view;
             }
             width = width + childWidth;
             Log.e("onMeasure_width",":"+width);
-
         }
         setMeasuredDimension(width,heightSize);
     }
@@ -127,27 +134,34 @@ public class SwipeLayout extends LinearLayout {
                  float moveX =  event.getRawX();
                  float moveY =  event.getRawY();
 
-                 if (Math.abs(moveX - downX) >= (getMeasuredWidth() - mContentView.getMeasuredWidth())) {
-                     Toast.makeText(mContext, "超过了最大宽度", Toast.LENGTH_SHORT).show();
-                     break;
-                 }//超过了控件最大宽度
-                 Log.e("ACTION_MOVE:","x:"+moveX+"y:"+moveY);
-                 float moveX1 =  event.getRawX();
-                 float moveY1 =  event.getRawY();
-                 if (Math.abs(moveX1 - downX) > 10){
-                     scrollTo((int) Math.abs(moveX1 - downX),0);
+                 if (canScroll(moveX,downX)){
+                     float moveX1 =  event.getRawX();
+//                     if (Math.abs(moveX1 - downX) > 10){
+                         scrollTo((int)-(moveX1 - downX),0);
+                         mContentView.getLocationOnScreen(location);
+                         locationX = location[0];
+//                         Log.e("leftpostion", locationX+"");
+//                     }else {
+//
+//                     }
                  }else {
-
+                     break;
                  }
+
                  break;
              case MotionEvent.ACTION_UP:
                  float upX = event.getRawX();
-                 if (Math.abs(upX - downX) > 100 ){
-                     Toast.makeText(mContext, "大于100了执行动画", Toast.LENGTH_SHORT).show();
-                     mScroller.startScroll(0, 0, -(int)Math.abs(upX - downX), 0,1000);
+                    if (shouldOpen()){
+                        mScroller.startScroll(getScrollX(), 0, Math.abs(meunWidth -  (int)Math.abs(upX - downX)), 0,1000);
+                    }else {
+                        mScroller.startScroll(getScrollX(), 0, -(int)Math.abs(upX - downX), 0,1000);
+                    }
+//                 if (Math.abs(upX - downX) > 100 ){
+//                     Toast.makeText(mContext, "大于100了执行动画", Toast.LENGTH_SHORT).show();
+//                     mScroller.startScroll(0, 0, -(int)Math.abs(upX - downX), 0,1000);
                      invalidate();
-//                     scrollBy(-(int) Math.abs(upX - downX),0);
-                 }
+////                     scrollBy(-(int) Math.abs(upX - downX),0);
+//                 }
 //                 int upX = (int) event.getRawX();
 //                 int upY = (int) event.getRawY();
 //                 scrollBy( upX - downX ,0);
@@ -160,8 +174,8 @@ public class SwipeLayout extends LinearLayout {
 
 
 
-    private void closeMenu(){
-
+    public void closeMenu(){
+        mScroller.startScroll(getScrollX(), 0, -meunWidth, 0,1000);
     }
 
     private void isExpand(){
@@ -183,4 +197,37 @@ public class SwipeLayout extends LinearLayout {
         mVelocityTracker.recycle();
         super.onDetachedFromWindow();
     }
+
+    /**
+     * 判断是否超过了menu的最大宽度不在滑动
+     * @param moveX
+     * @param downX
+     */
+    private boolean canScroll(float moveX, float downX){
+        if (moveX < downX){ //表示向左滑动
+            return Math.abs(moveX - downX) <= (getMeasuredWidth() - mContentView.getMeasuredWidth());
+        }else {
+            if (locationX > 0){ //如果右滑动超过左起点
+                return false;
+            }
+        }
+        return false;
+//        getScrollX();
+//        if (moveX < downX){ //表示向左滑动
+//            return Math.abs(moveX - downX) <= (getMeasuredWidth() - mContentView.getMeasuredWidth());
+//        }else {
+//            return false;
+//        }
+//        return true;
+    }
+
+    /**
+     * 判断滑动边（我以menu菜单的宽度的 percent 比例）
+     */
+    private boolean shouldOpen(){
+        if (getScrollX() < 0)
+        Log.e("currentXX:",Math.abs(getScrollX()) +" & " + meunWidth * percent );
+        return ( Math.abs(getScrollX()) > meunWidth * percent);
+    }
+
 }
